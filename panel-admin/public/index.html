@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<title>TruE-MAN Blockchain Admin Panel</title>
+<link rel="stylesheet" href="./styles.css">
+<script src="./app.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="logo.png">
+</head>
+
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <img src="logo.png" alt="Logo" style="height:80px;">
+    <h1>TruE-MAN Blockchain Admin Panel</h1>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="panel-section active" id="panelList">
+    <div class="contract-input">
+      <h3>Contract Address:</h3>
+      <input type="text" id="contractAddressInput" placeholder="Enter Contract Address" readonly>
+      <span id="contractEditBtn" class="action-btn">✏️</span>
+    </div>
+
+    <h2>Pending Requests</h2>
+    <table id="pendingTable">
+      <thead>
+        <tr><th>ID</th><th>Buyer</th><th>Users</th><th>Duration</th><th>Amount Paid</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2 style="margin-top:40px;">Completed Requests</h2>
+    <table id="completedTable">
+      <thead>
+        <tr><th>ID</th><th>Buyer</th><th>Users</th><th>Duration</th><th>Amount Paid</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2 style="margin-top:40px;">Cancelled Requests</h2>
+    <table id="cancelledTable">
+      <thead>
+        <tr><th>ID</th><th>Buyer</th><th>Users</th><th>Duration</th><th>Amount Paid</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="keyModal">
+  <div class="modal-content">
+    <h3>Enter Private Key</h3>
+    <input type="text" id="deployerKeyModalInput" placeholder="Private Key">
+    <button onclick="setDeployerKey()">Submit</button>
+  </div>
+</div>
+
+<div id="loadingOverlay">
+  <div class="loadingBox">
+    <div class="spinner"></div>
+    <p id="loadingMessage">Processing...</p>
+  </div>
+</div>
+
+</body>
+</html>

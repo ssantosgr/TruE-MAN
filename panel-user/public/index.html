@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<title>TruE-MAN Blockchain User Panel</title>
+<link rel="stylesheet" href="./styles.css">
+<script src="./app.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="logo.png">
+</head>
+
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <img src="logo.png" alt="Logo" style="height:80px;">
+    <h1>TruE-MAN Blockchain User Panel</h1>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="panel-section active" id="panelCreate">
+    <div class="form-section">
+      <h3>Create a request by providing the following details:</h3>
+
+      <input id="contractAddressInputCreate" placeholder="Contract Address" type="text"><br>
+      <input id="numUsers" placeholder="Number of Users" type="number"><br>
+      <input id="durationMins" placeholder="Duration (mins)" type="number"><br>
+      <input id="offChainData" placeholder="Order Details" type="text"><br>
+
+      <button onclick="createRequest()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="keyModal">
+  <div class="modal-content">
+    <h3>Enter Private Key</h3>
+    <input type="text" id="deployerKeyModalInput" placeholder="Private Key">
+    <button onclick="setDeployerKey()">Submit</button>
+  </div>
+</div>
+
+<div id="loadingOverlay">
+  <div class="loadingBox">
+    <div class="spinner"></div>
+    <p id="loadingMessage">Processing...</p>
+  </div>
+</div>
+
+</body>
+</html>
