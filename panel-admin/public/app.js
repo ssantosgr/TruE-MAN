@@ -71,14 +71,30 @@ function clearTable(tbodySelector){
 async function confirmRequest(requestId){ 
   const c = document.getElementById("contractAddressInput").value; 
   if(!c) return; 
+
   showLoading("Confirming..."); 
+
   try{ 
     const res = await fetch("/api/confirm",{
       method:"POST", 
       headers:{"Content-Type":"application/json"}, 
-      body: JSON.stringify({privateKey:deployerKey, contractAddress:c, requestId})
+      body: JSON.stringify({
+        privateKey: deployerKey,
+        contractAddress: c,
+        requestId
+      })
     }); 
-    await res.json(); 
+
+    const data = await res.json();
+
+    if(!res.ok) {
+      throw new Error(data.error || "Failed to confirm request");
+    }
+
+    alert(JSON.stringify(data, null, 2));
+
+  } catch(err){
+    alert(err.message);
   } finally{ 
     hideLoading(); 
     updateTables();
@@ -87,17 +103,35 @@ async function confirmRequest(requestId){
 
 async function cancelRequest(requestId){ 
   const reason = prompt("Enter reason:"); 
-  if(reason===null) return; 
+  if(reason === null) return; 
+
   const c = document.getElementById("contractAddressInput").value; 
   if(!c) return; 
+
   showLoading("Cancelling..."); 
+
   try{ 
     const res = await fetch("/api/cancel",{
       method:"POST", 
       headers:{"Content-Type":"application/json"}, 
-      body: JSON.stringify({privateKey:deployerKey, contractAddress:c, requestId, reason})
+      body: JSON.stringify({
+        privateKey: deployerKey,
+        contractAddress: c,
+        requestId,
+        reason
+      })
     }); 
-    await res.json(); 
+
+    const data = await res.json();
+
+    if(!res.ok) {
+      throw new Error(data.error || "Failed to cancel request");
+    }
+
+    alert(JSON.stringify(data, null, 2));
+
+  } catch(err){
+    alert(err.message);
   } finally{ 
     hideLoading(); 
     updateTables(); 

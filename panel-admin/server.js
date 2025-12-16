@@ -24,7 +24,7 @@ app.post("/api/confirm", async (req, res) => {
     const contract = getContract(contractAddress, privateKey);
     const tx = await contract.confirmRequest(BigInt(requestId));
     await tx.wait();
-    res.json({ success: true, txHash: tx.hash });
+    res.json({ success: true, txHash: tx.hash, message: "Request confirmed" });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -35,7 +35,7 @@ app.post("/api/cancel", async (req, res) => {
     const contract = getContract(contractAddress, privateKey);
     const tx = await contract.cancelRequest(BigInt(requestId), reason);
     await tx.wait();
-    res.json({ success: true, txHash: tx.hash });
+    res.json({ success: true, txHash: tx.hash, message: "Request cancelled" });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
