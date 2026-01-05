@@ -4,7 +4,8 @@ import sqlite3
 import uuid
 import json
 import requests
-from database import save_request, get_request_id_by_tx_hash
+from database import save_request, get_request_id_by_tx_hash, get_request_data_by_tx_hash
+from utils import call_agent, call_agent_restart
 
 api = Blueprint('api', __name__)
 
@@ -37,6 +38,9 @@ def create_request():
             tenant_PLMN = data.get('tenantPLMN')
             tenant_AMF_IP = data.get('tenantAMFIP')
             tenant_AMF_port = data.get('tenantAMFPort')
+            tenant_NSSAI = data.get('tenantNSSAI')
+            # Store tenant NSSAI as JSON list string
+            tenant_nssai_str = json.dumps(tenant_NSSAI) if tenant_NSSAI else None
         except Exception as e:
             logging.error(f"Error extracting fields: {e}")
             return jsonify({"error": "Error processing request fields"}), 400
@@ -54,7 +58,8 @@ def create_request():
                 duration_mins=duration_mins,
                 tenant_plmn=tenant_PLMN,
                 tenant_amf_ip=tenant_AMF_IP,
-                tenant_amf_port=tenant_AMF_port
+                tenant_amf_port=tenant_AMF_port,
+                tenant_nssai_json=tenant_nssai_str
             )
             logging.info(f"Received create request: {data}")
         except Exception as e:
@@ -109,12 +114,51 @@ def update_request_state(tx_hash, state):
             save_request(request_id, state=state.capitalize())
             logging.info(f"Request {request_id} (tx_hash: {tx_hash}) state updated to: {state.capitalize()}")
             
+            if state.lower() == 'accepted':
+                # Get request data from DB to pass to the agent
+                request_data = get_request_data_by_tx_hash(tx_hash)
+                if not request_data:
+                    logging.error(f"Failed to retrieve request data for tx_hash {tx_hash}")
+                    return jsonify({"error": "Failed to retrieve request data"}), 500
+                
+                # Call the agent to restart the service with tenant configuration
+                agent_url = current_app.config.get('AGENT_URL', 'http://localhost:4000/resource/1')
+                
+                # Parse tenant NSSAI JSON if it exists
+                nssai_tenant = json.loads(request_data.get('tenant_nssai_json')) if request_data.get('tenant_nssai_json') else None
+                
+                # Build AMF address with port for tenant if both IP and port exist
+                tenant_amf_addr = None
+                if request_data.get('tenant_amf_ip'):
+                    if request_data.get('tenant_amf_port'):
+                        tenant_amf_addr = f"{request_data.get('tenant_amf_ip')}:{request_data.get('tenant_amf_port')}"
+                    else:
+                        tenant_amf_addr = request_data.get('tenant_amf_ip')
+                
+                response = call_agent_restart(
+                    agent_url=agent_url,
+                    amf_addr_tenant=tenant_amf_addr,
+                    nssai_tenant=nssai_tenant,
+                    plmn_tenant=request_data.get('tenant_plmn'),
+                    tac_tenant=int(request_data.get('shared_tac')) if request_data.get('shared_tac') else None
+                )
+                if response.status_code != 200:
+                    logging.error(f"Failed to restart service on agent for request {request_id}")
+                    return jsonify({"error": "Failed to restart service on agent"}), 500
+                
+            if state.lower() == 'rejected':
+                logging.info(f"Request with request_id {request_id} has been rejected.")
+            
+            if state.lower() == 'completed':
+                logging.info(f"Request with request_id {request_id} has been completed.")
+            
             return jsonify({
                 "success": True,
                 "message": f"Request state updated to {state.capitalize()}",
                 "txHash": tx_hash,
                 "state": state.capitalize()
             }), 200
+            
         except Exception as e:
             logging.error(f"Error updating request state: {e}")
             return jsonify({"error": "Failed to update request state"}), 500
@@ -122,3 +166,5 @@ def update_request_state(tx_hash, state):
     except Exception as e:
         logging.error(f"Unexpected error in update_request_state: {e}")
         return jsonify({"error": str(e)}), 500
+    
+    

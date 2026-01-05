@@ -6,7 +6,7 @@ import logging
 def call_agent(action: str, agent_url: str, action_parameters: Optional[dict] = None) -> requests.Response:
     """Constructs and sends a request to the agent."""
     
-    gnb_id = agent_url.split(".")[-1].split(":")[0]
+    gnb_id = '1'
     agent_url = agent_url.rstrip('/') + '/resource/' + gnb_id
     
     payload = {
@@ -33,8 +33,8 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[dict] = 
     logging.info(f"Sending action '{action}' to {agent_url} with params: {action_parameters}")
     try:
         response = requests.patch(agent_url, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()  # Raise an exception for bad status codes
-        if(response.status_code == 200):
+        response.raise_for_status()
+        if response.status_code == 200:
             success_message = f"Action '{action}' executed successfully."
             response._content = success_message.encode('utf-8')
             logging.info(f"Agent responded with status {response.status_code}: {response.text}")
@@ -47,3 +47,27 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[dict] = 
         response.status_code = 500
         response._content = b"Internal Server Error"
         return response
+
+def call_agent_restart(agent_url: str, amf_addr_tenant: Optional[str] = None, 
+                       nssai_tenant: Optional[list] = None, plmn_tenant: Optional[str] = None,
+                       tac_tenant: Optional[int] = None) -> requests.Response:
+    """Constructs and sends a restart request to the agent with tenant configuration parameters.
+    Only includes parameters that are provided (not None)."""
+    
+    # Build action_parameters dict only with provided values
+    action_parameters = {}
+    if amf_addr_tenant is not None:
+        action_parameters["PRMT_AMF_ADDR_TENANT"] = amf_addr_tenant
+    if nssai_tenant is not None:
+        action_parameters["PRMT_NSSAI_TENANT"] = nssai_tenant
+    if plmn_tenant is not None:
+        action_parameters["PRMT_PLMN_TENANT"] = plmn_tenant
+    if tac_tenant is not None:
+        action_parameters["PRMT_TAC_TENANT"] = tac_tenant
+    
+    # Use call_agent with action='restart' and the built parameters
+    return call_agent(
+        action='restart',
+        agent_url=agent_url,
+        action_parameters=action_parameters if action_parameters else None
+    )
