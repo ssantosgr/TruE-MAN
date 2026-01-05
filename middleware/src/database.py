@@ -6,47 +6,23 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                  (id TEXT PRIMARY KEY,
-                  private_key TEXT,
-                  contract_address TEXT,
-                  duration_mins TEXT,
-                  ue_imsi TEXT,
-                  ue_k TEXT,
-                  ue_opc TEXT,
+                  private_key TEXT NOT NULL,
+                  contract_address TEXT NOT NULL,
+                  shared_tac TEXT NOT NULL,
+                  ue_imsis_json TEXT NOT NULL,
+                  duration_mins INTEGER,
                   tenant_plmn TEXT,
                   tenant_amf_ip TEXT,
-                  tenant_amf_port TEXT,
-                  accepted TEXT,
+                  tenant_amf_port INTEGER,
+                  accepted TEXT DEFAULT 'UNKNOWN',
                   sc_request_id TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    
-    c.execute('''CREATE TABLE IF NOT EXISTS ues
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  imsi TEXT UNIQUE,
-                  k TEXT,
-                  opc TEXT,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
                   
     conn.commit()
     conn.close()
     logging.info("Database initialized.")
 
-def add_ue(imsi, k, opc):
-    try:
-        conn = sqlite3.connect('requests.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO ues (imsi, k, opc) VALUES (?, ?, ?)", (imsi, k, opc))
-        conn.commit()
-        conn.close()
-        logging.info(f"UE {imsi} added to database.")
-        return True
-    except sqlite3.IntegrityError:
-        logging.error(f"UE {imsi} already exists.")
-        return False
-    except Exception as e:
-        logging.error(f"Error adding UE: {e}")
-        return False
-
-def save_request(request_id, private_key=None, contract_address=None, duration_mins=None, ue_imsi=None, ue_k=None, ue_opc=None, tenant_plmn=None, tenant_amf_ip=None, tenant_amf_port=None, accepted=None, sc_request_id=None):
+def save_request(request_id, private_key=None, contract_address=None, shared_tac=None, ue_imsis_json=None, duration_mins=None, tenant_plmn=None, tenant_amf_ip=None, tenant_amf_port=None, accepted=None, sc_request_id=None):
     try:
         conn = sqlite3.connect('requests.db')
         c = conn.cursor()
@@ -66,18 +42,15 @@ def save_request(request_id, private_key=None, contract_address=None, duration_m
             if contract_address is not None:
                 fields.append("contract_address = ?")
                 values.append(contract_address)
+            if shared_tac is not None:
+                fields.append("shared_tac = ?")
+                values.append(shared_tac)
+            if ue_imsis_json is not None:
+                fields.append("ue_imsis_json = ?")
+                values.append(ue_imsis_json)
             if duration_mins is not None:
                 fields.append("duration_mins = ?")
                 values.append(duration_mins)
-            if ue_imsi is not None:
-                fields.append("ue_imsi = ?")
-                values.append(ue_imsi)
-            if ue_k is not None:
-                fields.append("ue_k = ?")
-                values.append(ue_k)
-            if ue_opc is not None:
-                fields.append("ue_opc = ?")
-                values.append(ue_opc)
             if tenant_plmn is not None:
                 fields.append("tenant_plmn = ?")
                 values.append(tenant_plmn)
@@ -106,9 +79,9 @@ def save_request(request_id, private_key=None, contract_address=None, duration_m
             # Insert new record
             accepted_val = accepted if accepted is not None else 'UNKNOWN'
             c.execute('''INSERT INTO requests 
-                         (id, private_key, contract_address, duration_mins, ue_imsi, ue_k, ue_opc, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted, sc_request_id) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (request_id, private_key, contract_address, duration_mins, ue_imsi, ue_k, ue_opc, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted_val, sc_request_id))
+                         (id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted, sc_request_id) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (request_id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted_val, sc_request_id))
             logging.info(f"Request {request_id} saved to database.")
 
         conn.commit()

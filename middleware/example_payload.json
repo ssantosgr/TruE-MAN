@@ -1,0 +1,14 @@
+{
+  "privateKey": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "contractAddress": "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12",
+  "shared_TAC": "1",
+  "ueImsis": [
+    "123456789012345",
+    "987654321098765",
+    "456789123456789"
+  ],
+  "durationMins": 60,
+  "tenantPLMN": "00101",
+  "tenantAMFIP": "192.168.1.100",
+  "tenantAMFPort": 38412
+}
