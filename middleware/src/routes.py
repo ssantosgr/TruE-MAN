@@ -4,7 +4,7 @@ import sqlite3
 import uuid
 import json
 import requests
-from database import save_request, get_request_id_by_sc_id
+from database import save_request, get_request_id_by_tx_hash
 
 api = Blueprint('api', __name__)
 
@@ -46,6 +46,7 @@ def create_request():
             request_id = str(uuid.uuid4())
             save_request(
                 request_id=request_id,
+                state='Created',
                 private_key=private_key,
                 contract_address=contract_address,
                 shared_tac=shared_TAC,
@@ -62,22 +63,23 @@ def create_request():
 
         # Forward to Node.js server
         try:
+            number_of_users = len(ue_imsis) if ue_imsis else 1
             payload = {
                 "privateKey": private_key,
                 "contractAddress": contract_address,
-                "numUsers": data.get('numUsers', 1),
-                "durationMins": duration_mins,
-                "offChainData": request_id
+                "numUsers": number_of_users,
+                "durationMins": duration_mins
             }
             node_server_base_url = current_app.config.get('NODE_SERVER_URL', "http://localhost:3020/api")
             node_server_url = f"{node_server_base_url}/create"
             response = requests.post(node_server_url, json=payload)            
             if response.status_code == 200:
                 response_data = response.json()
-                sc_request_id = response_data.get('requestId')
-                if sc_request_id:
-                    save_request(request_id, sc_request_id=sc_request_id)
+                tx_hash = response_data.get('txHash')
+                if tx_hash:
+                    save_request(request_id, tx_hash=tx_hash, state='Pending')
                     return jsonify(response.json()), response.status_code
+                
             else:
                 logging.error(f"Node.js server returned status {response.status_code}")
                 return jsonify({"error": "Failed to process request on Node.js server"}), 500
@@ -89,32 +91,34 @@ def create_request():
         logging.error(f"Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@api.route('/api/status', methods=['POST'])
-def status_endpoint():
+@api.route('/api/request/<tx_hash>/<state>', methods=['PATCH'])
+def update_request_state(tx_hash, state):
     try:
-        data = request.get_json()
-        accepted = data.get('accepted')
-        request_id_param = data.get('requestId')
+        # Validate state parameter
+        valid_states = ['accepted', 'rejected']
+        if state.lower() not in valid_states:
+            return jsonify({"error": f"Invalid state. Must be one of: {', '.join(valid_states)}"}), 400
         
-        if accepted is None:
-            save_request(request_id_param, accepted='FAILED')
-            return jsonify({"error": "Missing 'accepted' field"}), 400
-
-        # Try to resolve UUID from SC ID
-        request_id = get_request_id_by_sc_id(str(request_id_param))
+        # Try to resolve UUID from tx_hash
+        request_id = get_request_id_by_tx_hash(tx_hash)
         if not request_id:
-            return jsonify({"error": "Missing 'requestId' field"}), 400
+            return jsonify({"error": f"Request with tx_hash '{tx_hash}' not found"}), 404
 
-        # Update status in DB
-        save_request(request_id, accepted=accepted)
-        
-        
-        logging.info(f"Received success status: {accepted}")
-
-        return jsonify({
-            "success": True,
-            "message": "Status received"
-        }), 200
+        # Update state in DB
+        try:
+            save_request(request_id, state=state.capitalize())
+            logging.info(f"Request {request_id} (tx_hash: {tx_hash}) state updated to: {state.capitalize()}")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Request state updated to {state.capitalize()}",
+                "txHash": tx_hash,
+                "state": state.capitalize()
+            }), 200
+        except Exception as e:
+            logging.error(f"Error updating request state: {e}")
+            return jsonify({"error": "Failed to update request state"}), 500
 
     except Exception as e:
+        logging.error(f"Unexpected error in update_request_state: {e}")
         return jsonify({"error": str(e)}), 500

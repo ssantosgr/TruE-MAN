@@ -14,15 +14,15 @@ def init_db():
                   tenant_plmn TEXT,
                   tenant_amf_ip TEXT,
                   tenant_amf_port INTEGER,
-                  accepted TEXT DEFAULT 'UNKNOWN',
-                  sc_request_id TEXT,
+                  tx_hash TEXT UNIQUE,
+                  state TEXT DEFAULT 'Pending' CHECK(LOWER(state) IN ('created', 'pending', 'accepted', 'rejected', 'completed')),
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
                   
     conn.commit()
     conn.close()
     logging.info("Database initialized.")
 
-def save_request(request_id, private_key=None, contract_address=None, shared_tac=None, ue_imsis_json=None, duration_mins=None, tenant_plmn=None, tenant_amf_ip=None, tenant_amf_port=None, accepted=None, sc_request_id=None):
+def save_request(request_id, private_key=None, contract_address=None, shared_tac=None, ue_imsis_json=None, duration_mins=None, tenant_plmn=None, tenant_amf_ip=None, tenant_amf_port=None, tx_hash=None, state=None):
     try:
         conn = sqlite3.connect('requests.db')
         c = conn.cursor()
@@ -60,12 +60,12 @@ def save_request(request_id, private_key=None, contract_address=None, shared_tac
             if tenant_amf_port is not None:
                 fields.append("tenant_amf_port = ?")
                 values.append(tenant_amf_port)
-            if accepted is not None:
-                fields.append("accepted = ?")
-                values.append(accepted)
-            if sc_request_id is not None:
-                fields.append("sc_request_id = ?")
-                values.append(sc_request_id)
+            if tx_hash is not None:
+                fields.append("tx_hash = ?")
+                values.append(tx_hash)
+            if state is not None:
+                fields.append("state = ?")
+                values.append(state)
             
             if fields:
                 values.append(request_id)
@@ -77,11 +77,11 @@ def save_request(request_id, private_key=None, contract_address=None, shared_tac
 
         else:
             # Insert new record
-            accepted_val = accepted if accepted is not None else 'UNKNOWN'
+            state_val = state if state is not None else 'Pending'
             c.execute('''INSERT INTO requests 
-                         (id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted, sc_request_id) 
+                         (id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, tx_hash, state) 
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (request_id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, accepted_val, sc_request_id))
+                      (request_id, private_key, contract_address, shared_tac, ue_imsis_json, duration_mins, tenant_plmn, tenant_amf_ip, tenant_amf_port, tx_hash, state_val))
             logging.info(f"Request {request_id} saved to database.")
 
         conn.commit()
@@ -91,16 +91,16 @@ def save_request(request_id, private_key=None, contract_address=None, shared_tac
         logging.error(f"Error saving request: {e}")
         return False
 
-def get_request_id_by_sc_id(sc_request_id):
+def get_request_id_by_tx_hash(tx_hash):
     try:
         conn = sqlite3.connect('requests.db')
         c = conn.cursor()
-        c.execute("SELECT id FROM requests WHERE sc_request_id = ?", (sc_request_id,))
+        c.execute("SELECT id FROM requests WHERE tx_hash = ?", (tx_hash,))
         row = c.fetchone()
         conn.close()
         if row:
             return row[0]
         return None
     except Exception as e:
-        logging.error(f"Error getting request ID by SC ID: {e}")
+        logging.error(f"Error getting request ID by tx_hash: {e}")
         return None
