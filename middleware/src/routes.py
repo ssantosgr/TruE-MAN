@@ -76,7 +76,6 @@ def status_endpoint():
 
         # Update status in DB
         save_request(request_id, accepted=accepted)
-
         
         
         logging.info(f"Received success status: {accepted}")
