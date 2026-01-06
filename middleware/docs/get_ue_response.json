@@ -1,0 +1,35 @@
+{
+    "status": "success",
+    "count": 1,
+    "ues": [
+        {
+            "sim_algo": "milenage",
+            "imsi": "001010000045613",
+            "opc": "C04126AC784BC27D1E24DEFDF4B1CD44",
+            "amf": 36865,
+            "sqn": "000000000000",
+            "K": "F6D8D81A6523107FB2473983739221A0",
+            "pdn_list": [
+                {
+                    "access_point_name": "internet",
+                    "nssai": [
+                        {
+                            "sst": 1
+                        }
+                    ]
+                }
+            ],
+            "impi": "001010000045613@ims.mnc001.mcc001.3gppnetwork.org",
+            "impu": [
+                "001010000045613",
+                "tel:045613000000",
+                "tel:045613"
+            ],
+            "allowed_5gs_tais":  { "restriction_type": "not_allowed", "tais": [ {"plmn" :"00101", "areas": [{"tacs": [101] }]  } ] }
+        }
+    ],
+    "filters": {
+        "access_point_name": null,
+        "nssai": null
+    }
+}
