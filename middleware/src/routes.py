@@ -1,97 +1,86 @@
 from flask import Blueprint, request, jsonify, current_app
 import logging
-import sqlite3
 import uuid
 import json
 import requests
 from database import save_request, get_request_id_by_tx_hash, get_request_data_by_tx_hash
-from utils import call_agent, call_agent_restart
+from utils import call_agent_restart, call_agent_get_all_ues, call_agent_update_ues
 
 api = Blueprint('api', __name__)
 
 @api.route('/api/create', methods=['POST'])
 def create_request():
     try:
-        # Payload corresponding to the JS function
-        try:
-            data = request.get_json()
-            if not data:
-                return jsonify({"error": "No JSON data provided"}), 400
-        except Exception as e:
-            logging.error(f"Error parsing JSON: {e}")
-            return jsonify({"error": "Invalid JSON format"}), 400
+        # Parse JSON payload
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
         
-        # Extracting fields as per the requirement
-        try:
-            private_key = data.get('privateKey')
-            contract_address = data.get('contractAddress')
-            shared_TAC = data.get('sharedTAC')
-            ue_imsis = data.get('ueImsis', [])
-            
-            if not private_key or not contract_address or not shared_TAC or not ue_imsis:
-                return jsonify({"error": "Missing one of required fields: privateKey, contractAddress, sharedTAC, or ueImsis"}), 400
-            
-            # Store IMSIs as JSON list string
-            ue_imsi_str = json.dumps(ue_imsis) if ue_imsis else None
-            duration_mins = data.get('durationMins')
-            
-            tenant_PLMN = data.get('tenantPLMN')
-            tenant_AMF_IP = data.get('tenantAMFIP')
-            tenant_AMF_port = data.get('tenantAMFPort')
-            tenant_NSSAI = data.get('tenantNSSAI')
-            # Store tenant NSSAI as JSON list string
-            tenant_nssai_str = json.dumps(tenant_NSSAI) if tenant_NSSAI else None
-        except Exception as e:
-            logging.error(f"Error extracting fields: {e}")
-            return jsonify({"error": "Error processing request fields"}), 400
+        # Extract and validate required fields
+        private_key = data.get('privateKey')
+        contract_address = data.get('contractAddress')
+        shared_TAC = data.get('sharedTAC')
+        ue_imsis = data.get('ueImsis', [])
+        
+        if not private_key or not contract_address or not shared_TAC or not ue_imsis:
+            return jsonify({"error": "Missing one of required fields: privateKey, contractAddress, sharedTAC, or ueImsis"}), 400
+        
+        # Store IMSIs as JSON list string
+        ue_imsi_str = json.dumps(ue_imsis) if ue_imsis else None
+        duration_mins = data.get('durationMins')
+        
+        tenant_PLMN = data.get('tenantPLMN')
+        tenant_AMF_IP = data.get('tenantAMFIP')
+        tenant_AMF_port = data.get('tenantAMFPort')
+        tenant_NSSAI = data.get('tenantNSSAI')
+        # Store tenant NSSAI as JSON list string
+        tenant_nssai_str = json.dumps(tenant_NSSAI) if tenant_NSSAI else None
 
         # Save to DB
-        try:
-            request_id = str(uuid.uuid4())
-            save_request(
-                request_id=request_id,
-                state='Created',
-                private_key=private_key,
-                contract_address=contract_address,
-                shared_tac=shared_TAC,
-                ue_imsis_json=ue_imsi_str,
-                duration_mins=duration_mins,
-                tenant_plmn=tenant_PLMN,
-                tenant_amf_ip=tenant_AMF_IP,
-                tenant_amf_port=tenant_AMF_port,
-                tenant_nssai_json=tenant_nssai_str
-            )
-            logging.info(f"Received create request: {data}")
-        except Exception as e:
-            logging.error(f"Error saving to database: {e}")
-            return jsonify({"error": "Failed to save request to database"}), 500
+        request_id = str(uuid.uuid4())
+        save_request(
+            request_id=request_id,
+            state='Created',
+            private_key=private_key,
+            contract_address=contract_address,
+            shared_tac=shared_TAC,
+            ue_imsis_json=ue_imsi_str,
+            duration_mins=duration_mins,
+            tenant_plmn=tenant_PLMN,
+            tenant_amf_ip=tenant_AMF_IP,
+            tenant_amf_port=tenant_AMF_port,
+            tenant_nssai_json=tenant_nssai_str
+        )
+        logging.info(f"Received create request: {data}")
 
         # Forward to Node.js server
-        try:
-            number_of_users = len(ue_imsis) if ue_imsis else 1
-            payload = {
-                "privateKey": private_key,
-                "contractAddress": contract_address,
-                "numUsers": number_of_users,
-                "durationMins": duration_mins
-            }
-            node_server_base_url = current_app.config.get('NODE_SERVER_URL', "http://localhost:3020/api")
-            node_server_url = f"{node_server_base_url}/create"
-            response = requests.post(node_server_url, json=payload)            
-            if response.status_code == 200:
-                response_data = response.json()
-                tx_hash = response_data.get('txHash')
-                if tx_hash:
-                    save_request(request_id, tx_hash=tx_hash, state='Pending')
-                    return jsonify(response.json()), response.status_code
-                
-            else:
-                logging.error(f"Node.js server returned status {response.status_code}")
-                return jsonify({"error": "Failed to process request on Node.js server"}), 500
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Error forwarding to Node.js: {e}")
-            return jsonify({"error": "Failed to forward request"}), 500
+        number_of_users = len(ue_imsis) if ue_imsis else 1
+        payload = {
+            "privateKey": private_key,
+            "contractAddress": contract_address,
+            "numUsers": number_of_users,
+            "durationMins": duration_mins
+        }
+        node_server_base_url = current_app.config.get('NODE_SERVER_URL', "http://localhost:3020/api")
+        node_server_url = f"{node_server_base_url}/create"
+        response = requests.post(node_server_url, json=payload)
+        
+        if response.status_code != 200:
+            logging.error(f"Node.js server returned status {response.status_code}")
+            return jsonify({"error": "Failed to process request on Node.js server"}), 500
+        
+        response_data = response.json()
+        tx_hash = response_data.get('txHash')
+        if not tx_hash:
+            logging.error("Node.js server returned 200 but no txHash")
+            return jsonify({"error": "No transaction hash received from server"}), 500
+        
+        save_request(request_id, tx_hash=tx_hash, state='Pending')
+        return jsonify(response_data), 200
 
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error forwarding to Node.js: {e}")
+        return jsonify({"error": "Failed to forward request"}), 500
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -100,7 +89,7 @@ def create_request():
 def update_request_state(tx_hash, state):
     try:
         # Validate state parameter
-        valid_states = ['accepted', 'rejected']
+        valid_states = ['accepted', 'rejected', 'completed']
         if state.lower() not in valid_states:
             return jsonify({"error": f"Invalid state. Must be one of: {', '.join(valid_states)}"}), 400
         
@@ -111,8 +100,9 @@ def update_request_state(tx_hash, state):
 
         # Update state in DB
         try:
-            save_request(request_id, state=state.capitalize())
-            logging.info(f"Request {request_id} (tx_hash: {tx_hash}) state updated to: {state.capitalize()}")
+            if state.lower() != 'accepted':
+                save_request(request_id, state=state.capitalize())
+                logging.info(f"Request {request_id} (tx_hash: {tx_hash}) state updated to: {state.capitalize()}")
             
             if state.lower() == 'accepted':
                 # Get request data from DB to pass to the agent
@@ -146,11 +136,61 @@ def update_request_state(tx_hash, state):
                     logging.error(f"Failed to restart service on agent for request {request_id}")
                     return jsonify({"error": "Failed to restart service on agent"}), 500
                 
-            if state.lower() == 'rejected':
-                logging.info(f"Request with request_id {request_id} has been rejected.")
-            
-            if state.lower() == 'completed':
-                logging.info(f"Request with request_id {request_id} has been completed.")
+                # Get all UEs and update TAC restrictions for UEs not in ue_imsis
+                ues_response = call_agent_get_all_ues(agent_url)
+                if ues_response.status_code == 200:
+                    try:
+                        ues_data = ues_response.json()
+                        all_ues = ues_data.get('ues', [])
+                        
+                        # Get ue_imsis from request data
+                        ue_imsis = json.loads(request_data.get('ue_imsis_json', '[]')) if request_data.get('ue_imsis_json') else []
+                        shared_tac = int(request_data.get('shared_tac')) if request_data.get('shared_tac') else None
+                        
+                        # Filter UEs whose IMSI is NOT in ue_imsis
+                        ues_to_update = []
+                        for ue in all_ues:
+                            if ue.get('imsi') not in ue_imsis:
+                                # Add shared TAC to the allowed_5gs_tais restriction
+                                if 'allowed_5gs_tais' not in ue:
+                                    ue['allowed_5gs_tais'] = {
+                                        "restriction_type": "not_allowed",
+                                        "tais": [{"plmn": request_data.get('tenant_plmn', '00101'), "areas": [{"tacs": []}]}]
+                                    }
+                                
+                                # Add shared_tac to the tacs list if not already present
+                                if shared_tac:
+                                    for tai in ue['allowed_5gs_tais'].get('tais', []):
+                                        for area in tai.get('areas', []):
+                                            if shared_tac not in area.get('tacs', []):
+                                                area.setdefault('tacs', []).append(shared_tac)
+                                
+                                ues_to_update.append(ue)
+                        
+                        # Update UEs with modified TAC restrictions
+                        if ues_to_update:
+                            update_response = call_agent_update_ues(agent_url, ues_to_update)
+                                
+                            if update_response.status_code != 200:
+                                logging.error(f"Failed to update UEs TAC restrictions for request {request_id}")
+                                save_request(request_id, state='Accepted')
+                                logging.info(f"Request {request_id} state updated to Accepted (UE update failed)")
+                            else:
+                                logging.info(f"Updated TAC restrictions for {len(ues_to_update)} UEs")
+                                save_request(request_id, state='Completed')
+                                logging.info(f"Request {request_id} state updated to Completed")
+                        else:
+                            # No UEs to update, mark as completed
+                            save_request(request_id, state='Completed')
+                            logging.info(f"Request {request_id} state updated to Completed (no UEs to update)")
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse UEs response: {e}")
+                        save_request(request_id, state='Accepted')
+                        logging.info(f"Request {request_id} state updated to Accepted (parse error)")
+                else:
+                    logging.error(f"Failed to get all UEs from agent: {ues_response.status_code}")
+                    save_request(request_id, state='Accepted')
+                    logging.info(f"Request {request_id} state updated to Accepted (get UEs failed)")
             
             return jsonify({
                 "success": True,
@@ -166,5 +206,3 @@ def update_request_state(tx_hash, state):
     except Exception as e:
         logging.error(f"Unexpected error in update_request_state: {e}")
         return jsonify({"error": str(e)}), 500
-    
-    
