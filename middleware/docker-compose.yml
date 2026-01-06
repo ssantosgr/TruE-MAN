@@ -1,0 +1,16 @@
+services:
+  middleware:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persist SQLite database
+      - middleware-data:/app/data
+    environment:
+      - FLASK_ENV=production
+      - NODE_SERVER_URL=http://host.docker.internal:3020/api
+      - AGENT_URL=http://host.docker.internal:4000
+    restart: unless-stopped
+
+volumes:
+  middleware-data:

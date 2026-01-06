@@ -15,11 +15,15 @@ middleware/
 │   ├── test_database.py
 │   └── test_utils.py
 ├── data/               # SQLite database (auto-created)
+├── Dockerfile
+├── docker-compose.yml
 ├── requirements.txt
 └── pytest.ini
 ```
 
 ## Setup
+
+### Local Development
 
 ```bash
 cd middleware
@@ -28,11 +32,30 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Docker
+
+```bash
+cd middleware
+docker compose up --build
+```
+
+Or without compose:
+```bash
+docker build -t trueman-middleware .
+docker run -p 5000:5000 -v middleware-data:/app/data trueman-middleware
+```
+
 ## Running
 
+### Local
 ```bash
 source venv/bin/activate
 python src/main.py
+```
+
+### Docker
+```bash
+docker compose up
 ```
 
 ## Testing
