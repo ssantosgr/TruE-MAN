@@ -5,10 +5,6 @@
 <h1 align="center">TruE-MAN</h1>
 
 <p align="center">
-  <strong>Trusted Ethereum-based Multi-operator Access Network</strong>
-</p>
-
-<p align="center">
   A blockchain-powered platform for secure 5G network resource sharing between mobile operators
 </p>
 
@@ -41,7 +37,7 @@ TruE-MAN enables trusted, transparent, and automated resource sharing agreements
                      │
               ┌──────┴──────┐
               │ gNodeB Agent│
-              │ (Port 4000) │
+              │(Port 28080) │
               └─────────────┘
 ```
 
@@ -162,7 +158,7 @@ node panel-user/server.js
 | User Panel   | 3020  | Tenant operator interface      |
 | Admin Panel  | 3010  | Network operator interface     |
 | Middleware   | 5000  | Backend API                    |
-| gNodeB Agent | 4000  | Network control agent          |
+| gNodeB Agent | 28080 | Network control agent          |
 | Blockchain   | 8545  | Ethereum JSON-RPC              |
 
 ## Configuration
@@ -173,7 +169,7 @@ node panel-user/server.js
 | Variable          | Default                        | Description              |
 |-------------------|--------------------------------|--------------------------|
 | `NODE_SERVER_URL` | `http://localhost:3020/api`    | User panel API endpoint  |
-| `AGENT_URL`       | `http://localhost:4000`        | gNodeB agent endpoint    |
+| `AGENT_URL`       | `http://localhost:28080`       | gNodeB agent endpoint    |
 | `FLASK_ENV`       | `development`                  | Flask environment        |
 
 ### Blockchain Configuration
@@ -223,7 +219,7 @@ Total Cost = rate × duration (mins) × number of users
 
 ## License
 
-ISC License
+Apache License 2.0
 
 ## Contributing
 
