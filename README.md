@@ -217,6 +217,16 @@ Rate: 0.00012 ETH per minute per user (~€0.50/min)
 Total Cost = rate × duration (mins) × number of users
 ```
 
+## Acknowledgements
+
+<p align="center">
+  <a href="https://trustchain.ngi.eu/">
+    <img src="/logos/NGI-trustchain.png" width="300" alt="NGI TrustChain" />
+  </a>
+</p>
+
+This project has received funding from the European Union's Horizon Europe research and innovation programme through the [NGI TrustChain](https://trustchain.ngi.eu/) project.
+
 ## License
 
 Apache License 2.0
