@@ -12,7 +12,12 @@ api = Blueprint('api', __name__)
 def create_request():
     try:
         # Parse JSON payload
-        data = request.get_json()
+        try:
+            data = request.get_json()
+        except Exception as e:
+            logging.error(f"Failed to parse JSON: {e}")
+            return jsonify({"error": "Invalid JSON format"}), 400
+        
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
         

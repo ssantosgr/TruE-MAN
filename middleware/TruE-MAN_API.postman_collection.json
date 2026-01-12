@@ -1,0 +1,654 @@
+{
+	"info": {
+		"_postman_id": "true-man-api-collection",
+		"name": "TruE-MAN API",
+		"description": "API collection for TruE-MAN middleware service. Handles request creation and state management for tenant network access.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "true-man"
+	},
+	"item": [
+		{
+			"name": "Requests",
+			"item": [
+				{
+					"name": "Create Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has txHash\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('txHash');",
+									"    ",
+									"    // Save txHash for subsequent requests",
+									"    pm.environment.set(\"tx_hash\", jsonData.txHash);",
+									"});",
+									"",
+									"pm.test(\"Response time is less than 5s\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Optional: Generate random values for testing",
+									"// pm.environment.set(\"random_tac\", Math.floor(Math.random() * 10000));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"privateKey\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\n  \"contractAddress\": \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\",\n  \"sharedTAC\": \"100\",\n  \"ueImsis\": [\n    \"123456789012345\",\n    \"987654321098765\",\n    \"456789123456789\"\n  ],\n  \"durationMins\": 60,\n  \"tenantPLMN\": \"99940\",\n  \"tenantAMFIP\": \"172.16.10.203\",\n  \"tenantAMFPort\": 38412,\n  \"tenantNSSAI\": [\n    {\"sst\": 1},\n    {\"sst\": 1, \"sd\": 10},\n    {\"sst\": 1, \"sd\": 11},\n    {\"sst\": 1, \"sd\": 12}\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"create"
+							]
+						},
+						"description": "Creates a new request with tenant configuration. Returns a transaction hash (txHash) that can be used to update the request state.\n\n**Required Fields:**\n- privateKey: Ethereum private key\n- contractAddress: Smart contract address\n- sharedTAC: Shared Tracking Area Code\n- ueImsis: Array of UE IMSI identifiers\n\n**Optional Fields:**\n- durationMins: Duration in minutes\n- tenantPLMN: Tenant's Public Land Mobile Network\n- tenantAMFIP: Tenant's AMF IP address\n- tenantAMFPort: Tenant's AMF port\n- tenantNSSAI: Tenant's Network Slice Selection Assistance Information"
+					},
+					"response": [
+						{
+							"name": "Create Request - Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"privateKey\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\n  \"contractAddress\": \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\",\n  \"sharedTAC\": \"100\",\n  \"ueImsis\": [\"123456789012345\"],\n  \"durationMins\": 60\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/create",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"create"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"txHash\": \"0xabc123def456...\"\n}"
+						},
+						{
+							"name": "Create Request - Missing Fields",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"privateKey\": \"0x1234567890abcdef\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/create",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"create"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"error\": \"Missing one of required fields: privateKey, contractAddress, sharedTAC, or ueImsis\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Request - Minimal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has txHash\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('txHash');",
+									"    pm.environment.set(\"tx_hash\", jsonData.txHash);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"privateKey\": \"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\n  \"contractAddress\": \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\",\n  \"sharedTAC\": \"100\",\n  \"ueImsis\": [\"123456789012345\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"create"
+							]
+						},
+						"description": "Create request with only required fields (minimal payload)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Request - Accept",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Request accepted successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.state).to.eql(\"Accepted\");",
+									"});",
+									"",
+									"pm.test(\"Response has txHash\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('txHash');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/request/{{tx_hash}}/accepted",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"{{tx_hash}}",
+								"accepted"
+							]
+						},
+						"description": "Updates request state to 'accepted'. This triggers:\n1. Agent restart with tenant configuration\n2. Retrieval of all UEs\n3. TAC restriction updates for non-tenant UEs\n4. Final state set to 'Completed' if successful\n\nUse the txHash from the Create Request response."
+					},
+					"response": [
+						{
+							"name": "Update Request - Accept Success",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/request/0xabc123/accepted",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"request",
+										"0xabc123",
+										"accepted"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Request state updated to Accepted\",\n  \"txHash\": \"0xabc123\",\n  \"state\": \"Accepted\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Request - Reject",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Request rejected successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.state).to.eql(\"Rejected\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/request/{{tx_hash}}/rejected",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"{{tx_hash}}",
+								"rejected"
+							]
+						},
+						"description": "Updates request state to 'rejected'. No additional processing is performed."
+					},
+					"response": [
+						{
+							"name": "Update Request - Reject Success",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/request/0xabc123/rejected",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"request",
+										"0xabc123",
+										"rejected"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Request state updated to Rejected\",\n  \"txHash\": \"0xabc123\",\n  \"state\": \"Rejected\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Request - Complete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Request completed successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"    pm.expect(jsonData.state).to.eql(\"Completed\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/request/{{tx_hash}}/completed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"{{tx_hash}}",
+								"completed"
+							]
+						},
+						"description": "Updates request state to 'completed'. Use this to manually mark a request as completed."
+					},
+					"response": [
+						{
+							"name": "Update Request - Complete Success",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/request/0xabc123/completed",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"request",
+										"0xabc123",
+										"completed"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Request state updated to Completed\",\n  \"txHash\": \"0xabc123\",\n  \"state\": \"Completed\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints for managing tenant network access requests."
+		},
+		{
+			"name": "Error Scenarios",
+			"item": [
+				{
+					"name": "Invalid State",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions invalid state\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"Invalid state\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/request/{{tx_hash}}/invalid",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"{{tx_hash}}",
+								"invalid"
+							]
+						},
+						"description": "Test error handling for invalid state values. Valid states are: accepted, rejected, completed."
+					},
+					"response": []
+				},
+				{
+					"name": "Nonexistent Transaction Hash",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions not found\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"not found\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/request/0xnonexistent/accepted",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"request",
+								"0xnonexistent",
+								"accepted"
+							]
+						},
+						"description": "Test error handling for nonexistent transaction hash."
+					},
+					"response": []
+				},
+				{
+					"name": "Missing Required Fields",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions missing fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"Missing\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"privateKey\": \"0x1234567890abcdef\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"create"
+							]
+						},
+						"description": "Test error handling when required fields are missing from the create request."
+					},
+					"response": []
+				},
+				{
+					"name": "No JSON Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions JSON\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include(\"JSON\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/plain"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "not json data"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"create"
+							]
+						},
+						"description": "Test error handling when request body is not valid JSON."
+					},
+					"response": []
+				}
+			],
+			"description": "Test cases for error handling and validation."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "tx_hash",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

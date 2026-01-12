@@ -21,4 +21,4 @@ app.register_blueprint(api)
 
 if __name__ == '__main__':
     debug = os.environ.get('FLASK_ENV') != 'production'
-    app.run(host='0.0.0.0', port=5000, debug=debug)
+    app.run(host='0.0.0.0', port=25000, debug=debug)

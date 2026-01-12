@@ -2,3 +2,8 @@ node_modules/
 venv/
 /.pytest_cache/
 *.cpython-*
+__pycache__/
+*.sqlite3
+data
+settings.json
+
