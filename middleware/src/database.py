@@ -39,7 +39,7 @@ def init_db():
                       nssai_json TEXT,
                       plmn TEXT,
                       tac INTEGER,
-                      tx_hash TEXT UNIQUE,
+                      external_requestId TEXT UNIQUE,
                       state TEXT DEFAULT 'Pending' CHECK(LOWER(state) IN ('created', 'pending', 'accepted', 'rejected', 'completed')),
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
@@ -78,27 +78,27 @@ def save_request(request_id: str, **kwargs) -> bool:
         logging.error(f"Error saving request: {e}")
         return False
 
-def get_request_id_by_tx_hash(tx_hash: str) -> Optional[str]:
+def get_request_id_by_external_requestId(external_requestId: str) -> Optional[str]:
     """Get request ID by transaction hash."""
     try:
         with sqlite3.connect(DB_PATH) as conn:
             c = conn.cursor()
-            c.execute("SELECT id FROM requests WHERE tx_hash = ?", (tx_hash,))
+            c.execute("SELECT id FROM requests WHERE external_requestId = ?", (external_requestId,))
             row = c.fetchone()
             return row[0] if row else None
     except Exception as e:
-        logging.error(f"Error getting request ID by tx_hash: {e}")
+        logging.error(f"Error getting request ID by external_requestId: {e}")
         return None
 
-def get_request_data_by_tx_hash(tx_hash: str) -> Optional[dict]:
+def get_request_data_by_external_requestId(external_requestId: str) -> Optional[dict]:
     """Get full request data by transaction hash."""
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
-            c.execute("SELECT * FROM requests WHERE tx_hash = ?", (tx_hash,))
+            c.execute("SELECT * FROM requests WHERE external_requestId = ?", (external_requestId,))
             row = c.fetchone()
             return dict(row) if row else None
     except Exception as e:
-        logging.error(f"Error getting request data by tx_hash: {e}")
+        logging.error(f"Error getting request data by external_requestId: {e}")
         return None

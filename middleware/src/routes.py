@@ -3,7 +3,7 @@ import logging
 import uuid
 import json
 import requests
-from database import save_request, get_request_id_by_tx_hash, get_request_data_by_tx_hash
+from database import save_request, get_request_data_by_external_requestId, get_request_id_by_external_requestId
 from utils import call_agent_restart, call_agent_get_all_ues, call_agent_update_ues
 
 api = Blueprint('api', __name__)
@@ -75,12 +75,12 @@ def create_request():
             return jsonify({"error": "Failed to process request on Node.js server"}), 500
         
         response_data = response.json()
-        tx_hash = response_data.get('txHash')
-        if not tx_hash:
-            logging.error("Node.js server returned 200 but no txHash")
-            return jsonify({"error": "No transaction hash received from server"}), 500
+        external_requestId = response_data.get('requestId') # Need to change the db
+        if not external_requestId:
+            logging.error("Node.js server returned 200 but no requestId")
+            return jsonify({"error": "No request ID received from server"}), 500
         
-        save_request(request_id, tx_hash=tx_hash, state='Pending')
+        save_request(request_id, external_requestId=external_requestId, state='Pending')
         return jsonify(response_data), 200
 
     except requests.exceptions.RequestException as e:
@@ -90,30 +90,30 @@ def create_request():
         logging.error(f"Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@api.route('/api/request/<tx_hash>/<state>', methods=['PATCH'])
-def update_request_state(tx_hash, state):
+@api.route('/api/request/<external_requestId>/<state>', methods=['PATCH'])
+def update_request_state(external_requestId, state):
     try:
         # Validate state parameter
         valid_states = ['accepted', 'rejected', 'completed']
         if state.lower() not in valid_states:
             return jsonify({"error": f"Invalid state. Must be one of: {', '.join(valid_states)}"}), 400
         
-        # Try to resolve UUID from tx_hash
-        request_id = get_request_id_by_tx_hash(tx_hash)
+        # Try to resolve UUID from external_requestId
+        request_id = get_request_id_by_external_requestId(external_requestId)
         if not request_id:
-            return jsonify({"error": f"Request with tx_hash '{tx_hash}' not found"}), 404
+            return jsonify({"error": f"Request with external_requestId '{external_requestId}' not found"}), 404
 
         # Update state in DB
         try:
             if state.lower() != 'accepted':
                 save_request(request_id, state=state.capitalize())
-                logging.info(f"Request {request_id} (tx_hash: {tx_hash}) state updated to: {state.capitalize()}")
+                logging.info(f"Request {request_id} (external_requestId: {external_requestId}) state updated to: {state.capitalize()}")
             
             if state.lower() == 'accepted':
                 # Get request data from DB to pass to the agent
-                request_data = get_request_data_by_tx_hash(tx_hash)
+                request_data = get_request_data_by_external_requestId(external_requestId)
                 if not request_data:
-                    logging.error(f"Failed to retrieve request data for tx_hash {tx_hash}")
+                    logging.error(f"Failed to retrieve request data for external_requestId {external_requestId}")
                     return jsonify({"error": "Failed to retrieve request data"}), 500
                 
                 # Call the agent to restart the service with tenant configuration
@@ -200,7 +200,7 @@ def update_request_state(tx_hash, state):
             return jsonify({
                 "success": True,
                 "message": f"Request state updated to {state.capitalize()}",
-                "txHash": tx_hash,
+                "external_requestId": external_requestId,
                 "state": state.capitalize()
             }), 200
             
