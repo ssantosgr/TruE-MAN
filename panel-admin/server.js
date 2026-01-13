@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const path = require("path");
 const { getContract, formatRequests } = require("../shared/shared");
+const { request } = require("http");
 
 const app = express();
 app.use(bodyParser.json());
@@ -43,14 +44,14 @@ app.post("/api/confirm", async (req, res) => {
     
     // Update middleware state to accepted
     try {
-      await fetchWithRetry(`http://localhost:5000/api/request/${tx.hash}/accepted`, {
+      await fetchWithRetry(`http://localhost:25000/api/request/${requestId}/accepted`, {
         method: 'PATCH'
       });
     } catch (err) {
       console.error("Failed to update middleware state after 3 retries:", err.message);
     }
     
-    res.json({ success: true, txHash: tx.hash, message: "Request confirmed" });
+    res.json({ success: true, txHash: requestId, message: "Request confirmed" });
   } catch (e) { res.status(500).json({ error: e.message }); }
   
 });
@@ -65,14 +66,14 @@ app.post("/api/cancel", async (req, res) => {
     
     // Update middleware state to rejected
     try {
-      await fetchWithRetry(`http://localhost:5000/api/request/${tx.hash}/rejected`, {
+      await fetchWithRetry(`http://localhost:25000/api/request/${requestId}/rejected`, {
         method: 'PATCH'
       });
     } catch (err) {
       console.error("Failed to update middleware state after 3 retries:", err.message);
     }
     
-    res.json({ success: true, txHash: tx.hash, message: "Request cancelled" });
+    res.json({ success: true, txHash: requestId, message: "Request cancelled" });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
