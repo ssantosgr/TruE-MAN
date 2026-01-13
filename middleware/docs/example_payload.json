@@ -1,0 +1,15 @@
+{
+  "privateKey": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "contractAddress": "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12",
+  "sharedTAC": 100,
+  "ueImsis": [
+    "123456789012345",
+    "987654321098765",
+    "456789123456789"
+  ],
+  "durationMins": 60,
+  "tenantPLMN": "99940",
+  "tenantAMFIP": "172.16.10.203",
+  "tenantAMFPort": 38412,
+  "tenantNSSAI": [{"sst": 1}, {"sst": 1, "sd": 10}, {"sst": 1, "sd": 11}, {"sst": 1, "sd": 12}]
+}
