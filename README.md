@@ -32,7 +32,7 @@ TruE-MAN enables trusted, transparent, and automated resource sharing agreements
                      │
               ┌──────┴──────┐
               │  Middleware │
-              │ (Port 5000) │
+              │ (Port 25000) │
               └──────┬──────┘
                      │
               ┌──────┴──────┐
@@ -82,7 +82,6 @@ Flask-based REST API that:
 Web interface for network operators to:
 - View pending resource sharing requests
 - Confirm or reject requests
-- Monitor active SLAs
 - Manage network configurations
 
 ### User Panel (`panel-user/`)
