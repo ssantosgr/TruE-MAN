@@ -13,7 +13,7 @@ UPDATABLE_FIELDS = {
     'private_key', 'contract_address', 'shared_tac', 'ue_imsis_json',
     'duration_mins', 'tenant_plmn', 'tenant_amf_ip', 'tenant_amf_port',
     'tenant_nssai_json', 'gtp_addr', 'tdd_config', 'amf_addr',
-    'nssai_json', 'plmn', 'tac', 'tx_hash', 'state'
+    'nssai_json', 'plmn', 'tac', 'external_requestId', 'state'
 }
 
 def init_db():
