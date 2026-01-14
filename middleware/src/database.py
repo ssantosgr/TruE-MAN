@@ -1,3 +1,4 @@
+"""Database operations for request management."""
 import sqlite3
 import logging
 import os
@@ -16,8 +17,9 @@ UPDATABLE_FIELDS = {
     'nssai_json', 'plmn', 'tac', 'external_requestId', 'state'
 }
 
+
 def init_db():
-    # Ensure data directory exists
+    """Initialize the database and create tables if they don't exist."""
     os.makedirs(_DATA_DIR, exist_ok=True)
     
     with sqlite3.connect(DB_PATH) as conn:
@@ -40,7 +42,7 @@ def init_db():
                       plmn TEXT,
                       tac INTEGER,
                       external_requestId TEXT UNIQUE,
-                      state TEXT DEFAULT 'Pending' CHECK(LOWER(state) IN ('created', 'pending', 'accepted', 'rejected', 'completed')),
+                      state TEXT DEFAULT 'Pending' CHECK(LOWER(state) IN ('created', 'pending', 'accepted', 'rejected', 'completed', 'expired', 'restorefailed')),
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
     logging.info("Database initialized.")
