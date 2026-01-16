@@ -42,13 +42,14 @@ def _create_error_response(status_code: int = 500, message: str = "Internal Serv
     return response
 
 
-def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = None) -> requests.Response:
+def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = None, timeout: int = 30) -> requests.Response:
     """Send a request to the agent.
     
     Args:
         action: The action to perform (e.g., 'restart', 'get_all_ues', 'update_ues')
-        agent_url: Base URL of the agent
+        agent_url: Base URL of the agent (e.g., http://localhost:4000)
         action_parameters: Optional parameters for the action
+        timeout: Request timeout in seconds (default: 30)
     
     Returns:
         Response object from the agent
@@ -56,10 +57,10 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = N
     url = f"{agent_url.rstrip('/')}/resource/{DEFAULT_GNB_ID}"
     payload = _build_payload(action, action_parameters)
     
-    logging.info(f"Sending action '{action}' to {url} with params: {action_parameters}")
+    logging.info(f"Sending action '{action}' to {url} with params: {action_parameters} and payload: {json.dumps(payload)}")
     
     try:
-        response = requests.patch(url, headers=CONTENT_TYPE_JSON, data=json.dumps(payload))
+        response = requests.patch(url, headers=CONTENT_TYPE_JSON, data=json.dumps(payload), timeout=timeout)
         response.raise_for_status()
         
         if response.status_code == 200:
@@ -67,6 +68,10 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = N
         
         logging.info(f"Agent responded with status {response.status_code}: {response.text}")
         return response
+    
+    except requests.exceptions.Timeout:
+        logging.error(f"Request to agent at {url} timed out after {timeout}s")
+        return _create_error_response(504, "Agent request timed out")
         
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to call agent at {url}: {e}")

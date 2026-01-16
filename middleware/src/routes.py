@@ -39,7 +39,7 @@ def update_request_state(external_requestId, state):
     """Update request state (accepted/rejected/completed)."""
     try:
         # Get agent URL from config
-        agent_url = current_app.config.get('AGENT_URL', 'http://localhost:4000/resource/1')
+        agent_url = current_app.config.get('AGENT_URL', 'http://localhost:4000')
         
         # Call service handler
         response_data, error_msg, status_code = update_request_state_handler(
