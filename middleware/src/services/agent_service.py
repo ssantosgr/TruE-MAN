@@ -20,12 +20,13 @@ def _parse_json_field(request_data, field_name):
     return json.loads(value) if value else None
 
 
-def restart_agent_with_tenant_config(agent_url, request_data):
-    """Restart agent service with tenant configuration.
+def restart_agent_with_tenant_config(agent_url, request_data, non_tenant_config=None):
+    """Restart agent service with tenant and non-tenant configuration.
     
     Args:
         agent_url: Base URL of the agent
         request_data: Dictionary containing tenant configuration
+        non_tenant_config: Dictionary with non-tenant params (gtp_addr, tdd_config, amf_addr, nssai, plmn, tac)
         
     Returns:
         True if restart successful, False otherwise
@@ -34,6 +35,7 @@ def restart_agent_with_tenant_config(agent_url, request_data):
     
     response = call_agent_restart(
         agent_url=agent_url,
+        non_tenant_config=non_tenant_config,
         amf_addr_tenant=_build_tenant_amf_address(request_data),
         nssai_tenant=_parse_json_field(request_data, 'tenant_nssai_json'),
         plmn_tenant=request_data.get('tenant_plmn'),
@@ -48,27 +50,33 @@ def restart_agent_with_tenant_config(agent_url, request_data):
 
 
 def _add_tac_restriction_to_ue(ue, shared_tac, tenant_plmn):
-    """Add TAC restriction to a UE configuration.
+    """Add TAC restriction to a UE configuration using forbidden_5gs_tais.
     
     Args:
         ue: UE configuration dictionary (modified in place)
-        shared_tac: TAC value to add to restrictions
-        tenant_plmn: PLMN for new restriction entries
+        shared_tac: TAC value to add to forbidden list
+        tenant_plmn: PLMN for the restriction entry
     """
-    if 'allowed_5gs_tais' not in ue:
-        ue['allowed_5gs_tais'] = {
-            "restriction_type": "not_allowed",
-            "tais": [{"plmn": tenant_plmn or '00101', "areas": [{"tacs": []}]}]
-        }
-    
     if not shared_tac:
         return
-        
-    for tai in ue['allowed_5gs_tais'].get('tais', []):
-        for area in tai.get('areas', []):
-            tacs = area.setdefault('tacs', [])
-            if shared_tac not in tacs:
-                tacs.append(shared_tac)
+    
+    plmn = tenant_plmn or '00101'
+    
+    if 'forbidden_5gs_tais' not in ue:
+        ue['forbidden_5gs_tais'] = [{"plmn": plmn, "areas": [{"tacs": [shared_tac]}]}]
+        return
+    
+    # Check if PLMN already exists in forbidden_5gs_tais
+    for tai in ue['forbidden_5gs_tais']:
+        if tai.get('plmn') == plmn:
+            for area in tai.get('areas', []):
+                tacs = area.setdefault('tacs', [])
+                if shared_tac not in tacs:
+                    tacs.append(shared_tac)
+            return
+    
+    # Add new PLMN entry
+    ue['forbidden_5gs_tais'].append({"plmn": plmn, "areas": [{"tacs": [shared_tac]}]})
 
 
 def get_and_update_ue_restrictions(agent_url, request_data):

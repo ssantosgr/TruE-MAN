@@ -16,6 +16,16 @@ RESTART_PARAM_MAPPING = {
     'tac_tenant': 'PRMT_TAC_TENANT',
 }
 
+# Non-tenant parameter mapping for restart action
+NON_TENANT_PARAM_MAPPING = {
+    'gtp_addr': 'PRMT_GTP_ADDR',
+    'tdd_config': 'PRMT_TDD_CONFIG',
+    'amf_addr': 'PRMT_AMF_ADDR',
+    'nssai': 'PRMT_NSSAI',
+    'plmn': 'PRMT_PLMN',
+    'tac': 'PRMT_TAC',
+}
+
 
 def _build_payload(action: str, action_parameters: Optional[Any] = None) -> dict:
     """Build the agent request payload."""
@@ -63,9 +73,6 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = N
         response = requests.patch(url, headers=CONTENT_TYPE_JSON, data=json.dumps(payload), timeout=timeout)
         response.raise_for_status()
         
-        if response.status_code == 200:
-            response._content = f"Action '{action}' executed successfully.".encode('utf-8')
-        
         logging.info(f"Agent responded with status {response.status_code}: {response.text}")
         return response
     
@@ -78,18 +85,27 @@ def call_agent(action: str, agent_url: str, action_parameters: Optional[Any] = N
         return _create_error_response()
 
 
-def call_agent_restart(agent_url: str, **kwargs) -> requests.Response:
-    """Send a restart request to the agent with tenant configuration.
+def call_agent_restart(agent_url: str, non_tenant_config: Optional[Dict] = None, **kwargs) -> requests.Response:
+    """Send a restart request to the agent with tenant and non-tenant configuration.
     
     Args:
         agent_url: Base URL of the agent
+        non_tenant_config: Dictionary with non-tenant params (gtp_addr, tdd_config, amf_addr, nssai, plmn, tac)
         **kwargs: Tenant parameters (amf_addr_tenant, nssai_tenant, plmn_tenant, tac_tenant)
     """
-    action_parameters = {
-        RESTART_PARAM_MAPPING[k]: v 
-        for k, v in kwargs.items() 
-        if k in RESTART_PARAM_MAPPING and v is not None
-    }
+    action_parameters = {}
+    
+    # Add non-tenant parameters
+    if non_tenant_config:
+        for k, v in non_tenant_config.items():
+            if k in NON_TENANT_PARAM_MAPPING and v is not None:
+                action_parameters[NON_TENANT_PARAM_MAPPING[k]] = v
+    
+    # Add tenant parameters
+    for k, v in kwargs.items():
+        if k in RESTART_PARAM_MAPPING and v is not None:
+            action_parameters[RESTART_PARAM_MAPPING[k]] = v
+    
     return call_agent('restart', agent_url, action_parameters or None)
 
 

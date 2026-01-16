@@ -41,11 +41,22 @@ def update_request_state(external_requestId, state):
         # Get agent URL from config
         agent_url = current_app.config.get('AGENT_URL', 'http://localhost:4000')
         
+        # Build non-tenant config from app config
+        non_tenant_config = {
+            'gtp_addr': current_app.config.get('AGENT_GTP_ADDR'),
+            'tdd_config': current_app.config.get('AGENT_TDD_CONFIG'),
+            'amf_addr': current_app.config.get('AGENT_AMF_ADDR'),
+            'nssai': current_app.config.get('AGENT_NSSAI'),
+            'plmn': current_app.config.get('AGENT_PLMN'),
+            'tac': current_app.config.get('AGENT_TAC'),
+        }
+        
         # Call service handler
         response_data, error_msg, status_code = update_request_state_handler(
             external_requestId, 
             state, 
-            agent_url
+            agent_url,
+            non_tenant_config
         )
         
         if error_msg:
