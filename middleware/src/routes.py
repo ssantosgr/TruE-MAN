@@ -11,6 +11,9 @@ api = Blueprint('api', __name__)
 def create_request():
     """Create a new request and forward to blockchain server."""
     try:
+        # Log raw request data for debugging
+        logging.info(f"Received request data: {request.data}")
+        
         # Parse JSON payload
         try:
             data = request.get_json()
