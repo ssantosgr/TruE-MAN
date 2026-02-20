@@ -12,39 +12,45 @@ class TestRestoreConfiguration:
     
     @patch('services.config_service.time.sleep')
     @patch('services.config_service.save_request')
+    @patch('services.config_service.call_agent_get_all_ues')
     @patch('services.config_service.call_agent_update_ues')
     @patch('services.config_service.call_agent_restart')
-    def test_successful_restoration(self, mock_restart, mock_update, mock_save, mock_sleep):
+    def test_successful_restoration(self, mock_restart, mock_update, mock_get_ues, mock_save, mock_sleep):
         """Test successful configuration restoration."""
         mock_restart.return_value = MagicMock(status_code=200)
+        mock_get_ues.return_value = MagicMock(
+            status_code=200,
+            json=MagicMock(return_value={'ues': [
+                {"imsi": "001010000000001", "forbidden_5gs_tais": [{"plmn": "00101", "areas": [{"tacs": [1234]}]}]},
+                {"imsi": "001010000000002"}
+            ]})
+        )
         mock_update.return_value = MagicMock(status_code=200)
         
-        original_ues = [
-            {"imsi": "001010000000001", "allowed_5gs_tais": {"restriction_type": "allowed"}},
-            {"imsi": "001010000000002"}
-        ]
+        non_tenant_config = {'gtp_addr': '1.2.3.4'}
         
         restore_configuration(
             'req-id-123',
             '0xhash123',
             'http://agent:4000',
-            original_ues,
+            non_tenant_config,
+            '1234',
+            '00101',
             1  # 1 minute for testing
         )
         
         # Verify sleep was called with correct duration
         mock_sleep.assert_called_once_with(60)  # 1 minute * 60 seconds
         
-        # Verify agent restart was called with null values
-        mock_restart.assert_called_once()
-        call_kwargs = mock_restart.call_args[1]
-        assert call_kwargs['amf_addr_tenant'] is None
-        assert call_kwargs['nssai_tenant'] is None
-        assert call_kwargs['plmn_tenant'] is None
-        assert call_kwargs['tac_tenant'] is None
+        # Verify agent restart was called with non_tenant_config only
+        mock_restart.assert_called_once_with(
+            agent_url='http://agent:4000',
+            non_tenant_config=non_tenant_config
+        )
         
-        # Verify UEs were restored
-        mock_update.assert_called_once_with('http://agent:4000', original_ues)
+        # Verify UEs were fetched and updated
+        mock_get_ues.assert_called_once_with('http://agent:4000')
+        mock_update.assert_called_once()
         
         # Verify state was updated to Expired
         mock_save.assert_called_with('req-id-123', state='Expired')
@@ -56,13 +62,13 @@ class TestRestoreConfiguration:
         """Test handling of agent restart failure during restoration."""
         mock_restart.return_value = MagicMock(status_code=500)
         
-        original_ues = [{"imsi": "001010000000001"}]
-        
         restore_configuration(
             'req-id-456',
             '0xhash456',
             'http://agent:4000',
-            original_ues,
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             1
         )
         
@@ -71,20 +77,27 @@ class TestRestoreConfiguration:
     
     @patch('services.config_service.time.sleep')
     @patch('services.config_service.save_request')
+    @patch('services.config_service.call_agent_get_all_ues')
     @patch('services.config_service.call_agent_update_ues')
     @patch('services.config_service.call_agent_restart')
-    def test_ue_update_failure(self, mock_restart, mock_update, mock_save, mock_sleep):
+    def test_ue_update_failure(self, mock_restart, mock_update, mock_get_ues, mock_save, mock_sleep):
         """Test handling of UE update failure during restoration."""
         mock_restart.return_value = MagicMock(status_code=200)
+        mock_get_ues.return_value = MagicMock(
+            status_code=200,
+            json=MagicMock(return_value={'ues': [
+                {"imsi": "001010000000001", "forbidden_5gs_tais": [{"plmn": "00101", "areas": [{"tacs": [1234]}]}]}
+            ]})
+        )
         mock_update.return_value = MagicMock(status_code=500)
-        
-        original_ues = [{"imsi": "001010000000001"}]
         
         restore_configuration(
             'req-id-789',
             '0xhash789',
             'http://agent:4000',
-            original_ues,
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             1
         )
         
@@ -93,16 +106,23 @@ class TestRestoreConfiguration:
     
     @patch('services.config_service.time.sleep')
     @patch('services.config_service.save_request')
+    @patch('services.config_service.call_agent_get_all_ues')
     @patch('services.config_service.call_agent_restart')
-    def test_no_ues_to_restore(self, mock_restart, mock_save, mock_sleep):
+    def test_no_ues_to_restore(self, mock_restart, mock_get_ues, mock_save, mock_sleep):
         """Test restoration when there are no UEs to restore."""
         mock_restart.return_value = MagicMock(status_code=200)
+        mock_get_ues.return_value = MagicMock(
+            status_code=200,
+            json=MagicMock(return_value={'ues': []})
+        )
         
         restore_configuration(
             'req-id-321',
             '0xhash321',
             'http://agent:4000',
-            [],  # Empty UE list
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             1
         )
         
@@ -116,13 +136,13 @@ class TestRestoreConfiguration:
         """Test handling of unexpected exceptions during restoration."""
         mock_restart.side_effect = Exception("Network error")
         
-        original_ues = [{"imsi": "001010000000001"}]
-        
         restore_configuration(
             'req-id-999',
             '0xhash999',
             'http://agent:4000',
-            original_ues,
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             1
         )
         
@@ -131,18 +151,25 @@ class TestRestoreConfiguration:
     
     @patch('services.config_service.time.sleep')
     @patch('services.config_service.save_request')
+    @patch('services.config_service.call_agent_get_all_ues')
     @patch('services.config_service.call_agent_update_ues')
     @patch('services.config_service.call_agent_restart')
-    def test_duration_calculation(self, mock_restart, mock_update, mock_save, mock_sleep):
+    def test_duration_calculation(self, mock_restart, mock_update, mock_get_ues, mock_save, mock_sleep):
         """Test that duration is correctly converted to seconds."""
         mock_restart.return_value = MagicMock(status_code=200)
+        mock_get_ues.return_value = MagicMock(
+            status_code=200,
+            json=MagicMock(return_value={'ues': []})
+        )
         mock_update.return_value = MagicMock(status_code=200)
         
         restore_configuration(
             'req-id-111',
             '0xhash111',
             'http://agent:4000',
-            [],
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             30  # 30 minutes
         )
         
@@ -159,13 +186,13 @@ class TestScheduleConfigurationRestoration:
         mock_thread_instance = MagicMock()
         mock_thread.return_value = mock_thread_instance
         
-        original_ues = [{"imsi": "001010000000001"}]
-        
         schedule_configuration_restoration(
             'req-id-123',
             '0xhash123',
             'http://agent:4000',
-            original_ues,
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             60
         )
         
@@ -173,7 +200,7 @@ class TestScheduleConfigurationRestoration:
         mock_thread.assert_called_once()
         call_kwargs = mock_thread.call_args[1]
         assert call_kwargs['daemon'] is True
-        assert len(call_kwargs['args']) == 5
+        assert len(call_kwargs['args']) == 7
         
         # Verify thread was started
         mock_thread_instance.start.assert_called_once()
@@ -185,7 +212,9 @@ class TestScheduleConfigurationRestoration:
             'req-id-456',
             '0xhash456',
             'http://agent:4000',
-            [],
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             0
         )
         
@@ -199,7 +228,9 @@ class TestScheduleConfigurationRestoration:
             'req-id-789',
             '0xhash789',
             'http://agent:4000',
-            [],
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             None
         )
         
@@ -213,7 +244,9 @@ class TestScheduleConfigurationRestoration:
             'req-id-321',
             '0xhash321',
             'http://agent:4000',
-            [],
+            {'gtp_addr': '1.2.3.4'},
+            '1234',
+            '00101',
             -10
         )
         

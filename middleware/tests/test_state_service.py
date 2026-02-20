@@ -204,7 +204,7 @@ class TestHandleAcceptedState:
         
         assert success is True
         assert error is None
-        mock_schedule.assert_called_once()
+        mock_schedule.assert_not_called()
 
 
 class TestUpdateRequestStateHandler:

@@ -278,5 +278,5 @@ class TestGetAndUpdateUeRestrictions:
         call_args = mock_update_ues.call_args[0]
         updated_ues = call_args[1]
         assert len(updated_ues) == 1
-        assert 'allowed_5gs_tais' in updated_ues[0]
-        assert updated_ues[0]['allowed_5gs_tais']['restriction_type'] == 'not_allowed'
+        assert 'forbidden_5gs_tais' in updated_ues[0]
+        assert updated_ues[0]['forbidden_5gs_tais'] == [{"plmn": "00101", "areas": [{"tacs": [1234]}]}]
