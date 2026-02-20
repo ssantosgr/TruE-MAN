@@ -117,7 +117,7 @@ Environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NODE_SERVER_URL` | Blockchain Node.js server URL | `https://besu.wimots.com/api` |
+| `NODE_SERVER_URL` | Blockchain Node.js server URL | `https://besu.example.com/api` |
 | `AGENT_URL` | gNodeB agent base URL | `http://172.16.100.209:28080` |
 | `AGENT_GNB_ID` | gNodeB resource identifier | `1` |
 | `AGENT_FEATURE_NAME` | Agent feature name | `gNodeB_service` |
