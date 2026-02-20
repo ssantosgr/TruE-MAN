@@ -35,10 +35,10 @@ TruE-MAN enables trusted, transparent, and automated resource sharing agreements
               │ (Port 25000)│
               └──────┬──────┘
                      │
-              ┌──────┴──────┐
-              │ gNodeB Agent│
-              │(Port 28080) │
-              └─────────────┘
+              ┌──────┴───────┐
+              │ gNodeB Agent │
+              │ (Port 28080) │
+              └──────────────┘
 ```
 
 ## Project Structure
@@ -72,7 +72,7 @@ Ethereum smart contract managing resource sharing SLAs:
 ### Middleware (`middleware/`)
 
 Flask-based REST API that:
-- Bridges admin panel with gNodeB agent
+- Bridges user and admin panel with gNodeB agent
 - Manages SQLite database for request tracking
 - Handles network reconfiguration on request approval
 - Communicates with blockchain via Node.js panels
@@ -97,7 +97,7 @@ Web interface for tenant operators to:
 - **Node.js** v18+
 - **Python** 3.9+
 - **Docker** (optional, for containerized deployment)
-- **Ethereum Node** (local Ganache or testnet)
+- **Private Blockchain Besu Network** (local testnet)
 
 ## Installation
 
@@ -123,7 +123,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Or using Docker:
+or using Docker:
 ```bash
 cd middleware
 docker compose up --build
@@ -158,7 +158,7 @@ node panel-user/server.js
 | Admin Panel  | 3010  | Network operator interface     |
 | Middleware   | 5000  | Backend API                    |
 | gNodeB Agent | 28080 | Network control agent          |
-| Blockchain   | 8545  | Ethereum JSON-RPC              |
+| Blockchain   | 8545  | Ethereum JSON-RPC Node         |
 
 ## Configuration
 
@@ -167,7 +167,7 @@ node panel-user/server.js
 **Middleware:**
 | Variable          | Default                        | Description              |
 |-------------------|--------------------------------|--------------------------|
-| `NODE_SERVER_URL` | `http://localhost:3020/api`    | User panel API endpoint  |
+| `NODE_SERVER_URL` | `http://localhost:3020/api`    | Blockchain User panel API endpoint  |
 | `AGENT_URL`       | `http://localhost:28080`       | gNodeB agent endpoint    |
 | `FLASK_ENV`       | `development`                  | Flask environment        |
 
