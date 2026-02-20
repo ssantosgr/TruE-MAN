@@ -39,7 +39,7 @@ class TestInitDb:
             'id', 'private_key', 'contract_address', 'shared_tac', 'ue_imsis_json',
             'duration_mins', 'tenant_plmn', 'tenant_amf_ip', 'tenant_amf_port',
             'tenant_nssai_json', 'gtp_addr', 'tdd_config', 'amf_addr', 'nssai_json',
-            'plmn', 'tac', 'tx_hash', 'state', 'created_at'
+            'plmn', 'tac', 'external_requestId', 'state', 'created_at'
         }
         with sqlite3.connect(temp_db.DB_PATH) as conn:
             c = conn.cursor()
@@ -105,14 +105,14 @@ class TestSaveRequest:
         result = temp_db.save_request(
             request_id='test-789',
             state='Accepted',
-            tx_hash='0xhash123'
+            external_requestId='0xhash123'
         )
         assert result is True
         
         # Verify update
         with sqlite3.connect(temp_db.DB_PATH) as conn:
             c = conn.cursor()
-            c.execute("SELECT state, tx_hash FROM requests WHERE id = ?", ('test-789',))
+            c.execute("SELECT state, external_requestId FROM requests WHERE id = ?", ('test-789',))
             row = c.fetchone()
         
         assert row[0] == 'Accepted'
@@ -162,42 +162,42 @@ class TestSaveRequest:
         assert row[1] == 'Accepted'
 
 
-class TestGetRequestIdByTxHash:
+class TestGetRequestIdByExternalRequestId:
     def test_returns_id_when_found(self, temp_db):
-        """Test getting request ID by tx_hash when it exists."""
+        """Test getting request ID by external_requestId when it exists."""
         temp_db.save_request(
             request_id='test-getid',
             private_key='pk_test',
             contract_address='0xabc',
             shared_tac='101',
             ue_imsis_json='["imsi1"]',
-            tx_hash='0xuniquehash'
+            external_requestId='0xuniquehash'
         )
         
-        result = temp_db.get_request_id_by_tx_hash('0xuniquehash')
+        result = temp_db.get_request_id_by_external_requestId('0xuniquehash')
         assert result == 'test-getid'
     
     def test_returns_none_when_not_found(self, temp_db):
-        """Test getting request ID by tx_hash when it doesn't exist."""
-        result = temp_db.get_request_id_by_tx_hash('0xnonexistent')
+        """Test getting request ID by external_requestId when it doesn't exist."""
+        result = temp_db.get_request_id_by_external_requestId('0xnonexistent')
         assert result is None
 
 
-class TestGetRequestDataByTxHash:
+class TestGetRequestDataByExternalRequestId:
     def test_returns_full_data_when_found(self, temp_db):
-        """Test getting full request data by tx_hash."""
+        """Test getting full request data by external_requestId."""
         temp_db.save_request(
             request_id='test-fulldata',
             private_key='pk_test',
             contract_address='0xcontract',
             shared_tac='102',
             ue_imsis_json='["imsi1", "imsi2"]',
-            tx_hash='0xdatahash',
+            external_requestId='0xdatahash',
             tenant_plmn='00101',
             duration_mins=60
         )
         
-        result = temp_db.get_request_data_by_tx_hash('0xdatahash')
+        result = temp_db.get_request_data_by_external_requestId('0xdatahash')
         
         assert result is not None
         assert isinstance(result, dict)
@@ -206,14 +206,14 @@ class TestGetRequestDataByTxHash:
         assert result['contract_address'] == '0xcontract'
         assert result['shared_tac'] == '102'
         assert result['ue_imsis_json'] == '["imsi1", "imsi2"]'
-        assert result['tx_hash'] == '0xdatahash'
+        assert result['external_requestId'] == '0xdatahash'
         assert result['tenant_plmn'] == '00101'
         assert result['duration_mins'] == 60
         assert result['state'] == 'Pending'
     
     def test_returns_none_when_not_found(self, temp_db):
-        """Test getting request data by tx_hash when it doesn't exist."""
-        result = temp_db.get_request_data_by_tx_hash('0xnonexistent')
+        """Test getting request data by external_requestId when it doesn't exist."""
+        result = temp_db.get_request_data_by_external_requestId('0xnonexistent')
         assert result is None
 
 
