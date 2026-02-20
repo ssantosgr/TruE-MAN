@@ -7,12 +7,24 @@ Flask-based middleware service that bridges the admin panel with the gNodeB agen
 ```
 middleware/
 ├── src/
-│   ├── main.py         # Flask app entry point
-│   ├── routes.py       # API endpoints
-│   ├── database.py     # SQLite database operations
-│   └── utils.py        # Agent communication utilities
+│   ├── main.py              # Flask app entry point
+│   ├── routes.py            # API endpoints
+│   ├── database.py          # SQLite database operations
+│   ├── utils.py             # Agent communication utilities
+│   └── services/
+│       ├── __init__.py
+│       ├── agent_service.py    # gNodeB agent interaction logic
+│       ├── config_service.py   # Configuration restoration scheduling
+│       ├── request_service.py  # Request creation and validation
+│       └── state_service.py    # Request state transitions
 ├── tests/
+│   ├── test_agent_service.py
+│   ├── test_config_service.py
 │   ├── test_database.py
+│   ├── test_request_service.py
+│   ├── test_routes.py
+│   ├── test_routes_integration.py
+│   ├── test_state_service.py
 │   └── test_utils.py
 ├── data/               # SQLite database (auto-created)
 ├── Dockerfile
@@ -42,7 +54,7 @@ docker compose up --build
 Or without compose:
 ```bash
 docker build -t trueman-middleware .
-docker run -p 5000:5000 -v middleware-data:/app/data trueman-middleware
+docker run -p 25000:25000 -v middleware-data:/app/data trueman-middleware
 ```
 
 ## Running
@@ -52,6 +64,8 @@ docker run -p 5000:5000 -v middleware-data:/app/data trueman-middleware
 source venv/bin/activate
 python src/main.py
 ```
+
+The service starts on port **25000** by default.
 
 ### Docker
 ```bash
@@ -67,40 +81,52 @@ pytest
 
 ## API Endpoints
 
-### POST `/api/create`
+### POST `/api/request`
 
-Create a new sharing request.
+Create a new spectrum sharing request and forward it to the blockchain server.
 
 **Request Body:**
 ```json
 {
   "privateKey": "0x...",
   "contractAddress": "0x...",
-  "sharedTAC": "101",
-  "ueImsis": ["001010000045613"],
+  "sharedTAC": "100",
+  "ueImsis": ["123456789012345", "987654321098765"],
   "durationMins": 60,
-  "tenantPLMN": "00101",
-  "tenantAMFIP": "192.168.1.1",
+  "tenantPLMN": "99940",
+  "tenantAMFIP": "172.16.10.203",
   "tenantAMFPort": 38412,
-  "tenantNSSAI": [{"sst": 1}]
+  "tenantNSSAI": [{"sst": 1}, {"sst": 1, "sd": 10}]
 }
 ```
 
-### PATCH `/api/request/<tx_hash>/<state>`
+### PATCH `/api/request/<external_requestId>/<state>`
 
 Update request state. Valid states: `accepted`, `rejected`, `completed`.
 
 When state is `accepted`:
 1. Restarts gNodeB with tenant configuration
 2. Fetches all UEs from agent
-3. Updates TAC restrictions for non-tenant UEs
-4. Marks request as `completed`
+3. Updates TAC restrictions (forbidden TAI lists) for non-tenant UEs
+4. Marks request as `Completed`
+5. Schedules automatic configuration restoration if a duration was specified
 
 ## Configuration
 
-Environment variables or Flask config:
-- `NODE_SERVER_URL` - Node.js blockchain server URL (default: `http://localhost:3020/api`)
-- `AGENT_URL` - gNodeB agent URL (default: `http://localhost:4000/resource/1`)
+Environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NODE_SERVER_URL` | Blockchain Node.js server URL | `https://besu.wimots.com/api` |
+| `AGENT_URL` | gNodeB agent base URL | `http://172.16.100.209:28080` |
+| `AGENT_GNB_ID` | gNodeB resource identifier | `1` |
+| `AGENT_FEATURE_NAME` | Agent feature name | `gNodeB_service` |
+| `AGENT_GTP_ADDR` | GTP tunnel address | `172.16.100.209` |
+| `AGENT_TDD_CONFIG` | TDD configuration index | `1` |
+| `AGENT_AMF_ADDR` | Non-tenant AMF address | `172.16.100.203` |
+| `AGENT_NSSAI` | Non-tenant NSSAI (JSON) | `[{"sst":1}, {"sst":1,"sd":10}, ...]` |
+| `AGENT_PLMN` | Non-tenant PLMN | `99940` |
+| `AGENT_TAC` | Non-tenant TAC | `100` |
 
 ## Database
 
@@ -109,4 +135,6 @@ SQLite database at `middleware/data/requests.db` with the following states:
 - `Pending` - After forwarding to blockchain
 - `Accepted` - Request approved by admin
 - `Rejected` - Request denied by admin
-- `Completed` - All agent operations finished
+- `Completed` - All agent operations finished successfully
+- `Expired` - Configuration restored after sharing duration elapsed
+- `RestoreFailed` - Automatic configuration restoration failed
